@@ -13,33 +13,37 @@ class NotificationListener : NotificationListenerService() {
 
     private val client = OkHttpClient()
     private lateinit var prefs: Prefs
+    private val TAG = "WSLListener"
 
     override fun onCreate() {
         super.onCreate()
         prefs = Prefs(this)
+        Log.i(TAG, "🚀 NotificationListener onCreate()")
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null) return
 
+        val pkg = sbn.packageName ?: "unknown"
+        Log.d(TAG, "📩 Notif masuk dari: $pkg")
+
         // 🚦 cek toggle listener
         if (!prefs.listenerEnabled) {
-            Log.d("WSLListener", "⏸ Listener OFF → notif diabaikan: ${sbn.packageName}")
+            Log.d(TAG, "⏸ Listener OFF → notif diabaikan ($pkg)")
             return
         }
-
-        val pkg = sbn.packageName ?: return
 
         // 🎯 cek whitelist
+        val whitelist = prefs.selectedPackages
         if (!prefs.isWhitelisted(pkg)) {
-            Log.d("WSLListener", "🚫 App $pkg tidak ada di whitelist → skip")
+            Log.d(TAG, "🚫 $pkg tidak ada di whitelist → skip. Current whitelist=$whitelist")
             return
         }
 
-        // 🚦 cek kode akses wajib
-        val kodeAkses = prefs.secret
+        // 🚦 cek accessCode wajib
+        val kodeAkses = prefs.accessCode
         if (kodeAkses.isEmpty()) {
-            Log.w("WSLListener", "⚠️ Kode Akses kosong → notif tidak dikirim")
+            Log.w(TAG, "⚠️ accessCode kosong → notif tidak dikirim ($pkg)")
             return
         }
 
@@ -48,33 +52,31 @@ class NotificationListener : NotificationListenerService() {
         val text = extras?.getCharSequence("android.text")?.toString()?.trim() ?: ""
         val ticker = sbn.notification.tickerText?.toString()?.trim() ?: ""
 
+        // 📦 Build JSON payload
         val payload = JSONObject().apply {
             put("package", pkg)
             put("title", title)
             put("text", text)
             put("ticker", ticker)
-            put("secret", kodeAkses)
+            put("accessCode", kodeAkses)
         }
 
-        val url = prefs.webhookUrl
-        if (url.isEmpty()) {
-            Log.w("WSLListener", "⚠️ Webhook URL kosong → notif tidak dikirim")
-            return
-        }
+        Log.d(TAG, "📝 Payload siap dikirim: $payload")
 
+        val url = "https://wsl.biz.id/notif.php" // 🔒 fixed webhook URL
         val body = payload.toString().toRequestBody("application/json".toMediaTypeOrNull())
         val req = Request.Builder().url(url).post(body).build()
 
         client.newCall(req).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                Log.e("WSLListener", "❌ Gagal kirim notif $pkg → ${e.message}")
+                Log.e(TAG, "❌ Gagal kirim notif $pkg → ${e.message}")
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (response.isSuccessful) {
-                    Log.i("WSLListener", "✅ Notif $pkg terkirim (${response.code})")
+                    Log.i(TAG, "✅ Notif $pkg terkirim (${response.code})")
                 } else {
-                    Log.w("WSLListener", "⚠️ Notif $pkg gagal (${response.code})")
+                    Log.w(TAG, "⚠️ Notif $pkg gagal (${response.code}) body=${response.body?.string()}")
                 }
                 response.close()
             }

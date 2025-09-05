@@ -13,7 +13,6 @@ android {
         targetSdk 34
         versionCode 1
         versionName "1.0"
-
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -37,7 +36,6 @@ android {
         }
     }
 
-    // ✅ Biar Java & Kotlin sama2 compile ke JVM 17
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -57,7 +55,10 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'com.google.android.material:material:1.12.0'
 
+    // 📦 WorkManager
     implementation 'androidx.work:work-runtime-ktx:2.9.0'
+
+    // 🌐 Networking
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'com.squareup.okio:okio:3.9.0'
 }

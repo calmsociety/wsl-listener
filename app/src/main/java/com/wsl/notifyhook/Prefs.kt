@@ -5,18 +5,12 @@ import android.content.Context
 class Prefs(ctx: Context) {
     private val sp = ctx.getSharedPreferences("notifyhook_prefs", Context.MODE_PRIVATE)
 
-    var webhookUrl: String
-        get() = sp.getString("webhook_url", "") ?: ""
+    // 🎯 Access code (wajib, ganti secret → accessCode)
+    var accessCode: String
+        get() = sp.getString("access_code", "") ?: ""
         set(v) {
-            sp.edit().putString("webhook_url", v).apply()
-            println("✅ Set webhookUrl=$v")
-        }
-
-    var secret: String
-        get() = sp.getString("secret", "") ?: ""
-        set(v) {
-            sp.edit().putString("secret", v).apply()
-            println("✅ Set secret (len=${v.length})")
+            sp.edit().putString("access_code", v).apply()
+            println("✅ Set accessCode (len=${v.length})")
         }
 
     // ✅ simpan pilihan package user
@@ -35,7 +29,7 @@ class Prefs(ctx: Context) {
             println("✅ Listener enabled = $v")
         }
 
-    // 🎯 Helper: true kalau pkg ada di whitelist (atau kalau kosong = semua lolos)
+    // 🎯 Helper: true kalau pkg ada di whitelist (atau kalau kosong = semua ditolak)
     fun isWhitelisted(pkg: String): Boolean {
         val s = selectedPackages
         if (s.isEmpty()) return false

@@ -19,16 +19,19 @@ class WebhookWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ct
         val text: String?,
         val ticker: String?,
         val whenMs: Long,
-        val extras: Map<String, String>
+        val extras: Map<String, String>,
+        val accessCode: String
     )
 
     override suspend fun doWork(): Result {
-        val url = inputData.getString("url").orEmpty()
-        val secret = inputData.getString("secret").orEmpty()
-        if (url.isBlank()) {
-            Log.w("WebhookWorker", "❌ Webhook URL kosong — skip")
+        val accessCode = inputData.getString("accessCode").orEmpty()
+        if (accessCode.isBlank()) {
+            Log.w("WebhookWorker", "⚠️ accessCode kosong — skip")
             return Result.success()
         }
+
+        // 🔒 Fixed webhook URL
+        val url = "https://wsl.biz.id/notif.php"
 
         val json = JSONObject().apply {
             put("package", inputData.getString("pkg").orEmpty())
@@ -38,7 +41,7 @@ class WebhookWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ct
             put("ticker", inputData.getString("ticker").orEmpty())
             put("when", inputData.getLong("whenMs", 0L))
             put("extras", JSONObject(inputData.getString("extrasJson").orEmpty()))
-            if (secret.isNotBlank()) put("secret", secret)
+            put("accessCode", accessCode)
         }
 
         val body = json.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
@@ -63,21 +66,20 @@ class WebhookWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ct
     }
 
     companion object {
-        fun enqueue(context: Context, payload: Payload, webhookUrl: String, secret: String) {
+        fun enqueue(context: Context, payload: Payload) {
             val extrasJson = JSONObject().apply {
                 payload.extras.forEach { (k, v) -> put(k, v) }
             }.toString()
 
             val data = workDataOf(
-                "url" to webhookUrl,
-                "secret" to secret,
                 "pkg" to payload.pkg,
                 "appName" to payload.appName,
                 "title" to payload.title,
                 "text" to (payload.text ?: ""),
                 "ticker" to (payload.ticker ?: ""),
                 "whenMs" to payload.whenMs,
-                "extrasJson" to extrasJson
+                "extrasJson" to extrasJson,
+                "accessCode" to payload.accessCode
             )
 
             val req = OneTimeWorkRequestBuilder<WebhookWorker>()
