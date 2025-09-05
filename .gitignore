@@ -1,0 +1,33 @@
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+
+# Local configuration
+local.properties
+*.keystore
+*.jks
+
+# Logs & Crash dumps
+*.log
+crash.txt
+hs_err_pid*.log
+replay_pid*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Archive / Temporary
+*.zip
+*.tar
+*.gz
+
+# Generated
+captures/
+.externalNativeBuild/
+.cxx/

@@ -1,0 +1,2 @@
+rootProject.name = "NotifyHook"
+include ':app'

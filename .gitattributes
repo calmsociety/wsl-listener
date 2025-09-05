@@ -1,0 +1,20 @@
+# Auto normalize line endings
+* text=auto eol=lf
+
+# Kotlin / Java / Gradle files
+*.kt   text eol=lf
+*.java text eol=lf
+*.gradle text eol=lf
+*.properties text eol=lf
+
+# Scripts
+*.sh   text eol=lf
+*.bat  text eol=crlf
+
+# JSON / XML
+*.json text eol=lf
+*.xml  text eol=lf
+
+# Markdown / Docs
+*.md   text eol=lf
+*.txt  text eol=lf
