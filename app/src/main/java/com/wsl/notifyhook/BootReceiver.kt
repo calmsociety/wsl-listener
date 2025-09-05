@@ -1,8 +1,10 @@
 package com.wsl.notifyhook
 
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.util.Log
 import android.widget.Toast
 
@@ -21,16 +23,29 @@ class BootReceiver : BroadcastReceiver() {
             Log.i(TAG, "📦 Boot selesai → $status, $kode")
             Toast.makeText(context, "WSL Listener siap! $status", Toast.LENGTH_LONG).show()
 
-            // 🚀 Auto-start NotificationListener kalau toggle ON
             if (prefs.listenerEnabled) {
                 try {
-                    val svc = Intent(context, NotificationListener::class.java)
-                    context.startService(svc)
-                    Log.i(TAG, "🚀 NotificationListener dimulai ulang otomatis")
+                    forceRebindNotificationListener(context)
+                    Log.i(TAG, "🔄 NotificationListener direbind otomatis")
                 } catch (e: Exception) {
-                    Log.e(TAG, "❌ Gagal start NotificationListener: ${e.message}")
+                    Log.e(TAG, "❌ Gagal rebind NotificationListener: ${e.message}")
                 }
             }
         }
+    }
+
+    private fun forceRebindNotificationListener(context: Context) {
+        val cn = ComponentName(context, NotificationListener::class.java)
+        val pm = context.packageManager
+        pm.setComponentEnabledSetting(
+            cn,
+            PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            PackageManager.DONT_KILL_APP
+        )
+        pm.setComponentEnabledSetting(
+            cn,
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+            PackageManager.DONT_KILL_APP
+        )
     }
 }

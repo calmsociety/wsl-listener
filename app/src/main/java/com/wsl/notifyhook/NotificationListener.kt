@@ -52,6 +52,12 @@ class NotificationListener : NotificationListenerService() {
         val text = extras?.getCharSequence("android.text")?.toString()?.trim() ?: ""
         val ticker = sbn.notification.tickerText?.toString()?.trim() ?: ""
 
+        // 🛑 Skip notif kosong
+        if (title.isBlank() && text.isBlank() && ticker.isBlank()) {
+            Log.d(TAG, "⚠️ Notif kosong dari $pkg → di-skip")
+            return
+        }
+
         // 📦 Build JSON payload
         val payload = JSONObject().apply {
             put("package", pkg)

@@ -6,8 +6,10 @@ import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.work.*
 import com.wsl.notifyhook.ui.*
 import com.wsl.notifyhook.utils.*
+import java.util.concurrent.TimeUnit
 
 class MainActivity : AppCompatActivity() {
 
@@ -41,6 +43,9 @@ class MainActivity : AppCompatActivity() {
 
         ensureNotificationAccess(this, prefs, tvStatus)
         ensureBatteryOptimization(this)
+
+        // ⏰ Schedule background rebind worker tiap 15 menit
+        scheduleRebindWorker()
     }
 
     override fun onResume() {
@@ -61,5 +66,22 @@ class MainActivity : AppCompatActivity() {
     private fun updateToggleText() {
         btnToggle.text = if (prefs.listenerEnabled) "❌ Matikan Listener" else "✅ Nyalakan Listener"
         tvStatus.text = statusText(this, prefs)
+    }
+
+    private fun scheduleRebindWorker() {
+        val req = PeriodicWorkRequestBuilder<ListenerRebindWorker>(
+            15, TimeUnit.MINUTES
+        ).setConstraints(
+            Constraints.Builder()
+                .setRequiresBatteryNotLow(false)
+                .setRequiresCharging(false)
+                .build()
+        ).build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "listener_rebind",
+            ExistingPeriodicWorkPolicy.KEEP,
+            req
+        )
     }
 }
