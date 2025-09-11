@@ -1,5 +1,6 @@
 package com.wsl.notifyhook
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.TextView
 import android.widget.Button
@@ -46,6 +47,14 @@ class MainActivity : AppCompatActivity() {
 
         // ⏰ Schedule background rebind worker tiap 15 menit
         scheduleRebindWorker()
+
+        // 🚀 Start PersistentService biar langsung jalan walau tanpa reboot
+        val svc = Intent(this, PersistentService::class.java)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            startForegroundService(svc)
+        } else {
+            startService(svc)
+        }
     }
 
     override fun onResume() {

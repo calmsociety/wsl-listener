@@ -5,8 +5,13 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import java.util.concurrent.TimeUnit
 
 class BootReceiver : BroadcastReceiver() {
 
@@ -30,6 +35,34 @@ class BootReceiver : BroadcastReceiver() {
                 } catch (e: Exception) {
                     Log.e(TAG, "❌ Gagal rebind NotificationListener: ${e.message}")
                 }
+
+                // 🚀 Start foreground service biar listener hidup permanen
+                try {
+                    val svc = Intent(context, PersistentService::class.java)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        context.startForegroundService(svc)
+                    } else {
+                        context.startService(svc)
+                    }
+                    Log.i(TAG, "🚀 PersistentService dimulai (foreground)")
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ Gagal start PersistentService: ${e.message}")
+                }
+            }
+
+            // ⏰ Schedule periodic worker
+            try {
+                val req = PeriodicWorkRequestBuilder<ListenerRebindWorker>(
+                    15, TimeUnit.MINUTES
+                ).build()
+                WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                    "listener_rebind",
+                    ExistingPeriodicWorkPolicy.KEEP,
+                    req
+                )
+                Log.i(TAG, "⏰ Periodic rebind worker (KEEP) dijadwalkan ulang")
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Gagal schedule periodic worker: ${e.message}")
             }
         }
     }

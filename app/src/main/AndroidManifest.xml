@@ -37,6 +37,13 @@
             </intent-filter>
         </service>
 
+        <!-- 🔄 Foreground service permanen -->
+        <service
+            android:name=".PersistentService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <!-- 🔁 Boot receiver → restart listener kalau toggle ON -->
         <receiver
             android:name=".BootReceiver"
