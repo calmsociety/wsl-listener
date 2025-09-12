@@ -1,11 +1,15 @@
 package com.wsl.notifyhook
 
+import android.content.Intent
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import okhttp3.*
 import org.json.JSONObject
 import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 
@@ -23,53 +27,43 @@ class NotificationListener : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null) return
-
         val pkg = sbn.packageName ?: "unknown"
         Log.d(TAG, "📩 Notif masuk dari: $pkg")
 
-        // 🚦 cek toggle listener
-        if (!prefs.listenerEnabled) {
-            Log.d(TAG, "⏸ Listener OFF → notif diabaikan ($pkg)")
-            return
-        }
-
-        // 🎯 cek whitelist
-        val whitelist = prefs.selectedPackages
-        if (!prefs.isWhitelisted(pkg)) {
-            Log.d(TAG, "🚫 $pkg tidak ada di whitelist → skip. Current whitelist=$whitelist")
-            return
-        }
-
-        // 🚦 cek accessCode wajib
+        if (!prefs.listenerEnabled) return
+        if (!prefs.isWhitelisted(pkg)) return
         val kodeAkses = prefs.accessCode
-        if (kodeAkses.isEmpty()) {
-            Log.w(TAG, "⚠️ accessCode kosong → notif tidak dikirim ($pkg)")
-            return
-        }
+        if (kodeAkses.isEmpty()) return
 
         val extras = sbn.notification.extras
         val title = extras?.getCharSequence("android.title")?.toString()?.trim() ?: ""
         val text = extras?.getCharSequence("android.text")?.toString()?.trim() ?: ""
         val ticker = sbn.notification.tickerText?.toString()?.trim() ?: ""
 
-        // 🛑 Skip notif kosong
-        if (title.isBlank() && text.isBlank() && ticker.isBlank()) {
-            Log.d(TAG, "⚠️ Notif kosong dari $pkg → di-skip")
-            return
-        }
+        if (title.isBlank() && text.isBlank() && ticker.isBlank()) return
 
-        // 📦 Build JSON payload
+        // 🕒 Format waktu sekarang
+        val waktu = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+
+        // 🔥 simpan log terakhir
+        prefs.lastLog = "🕒 $waktu\n📦 $pkg\n📝 $title\n💬 $text"
+
+        // 🚀 kirim broadcast biar MainActivity update realtime
+        val intent = Intent("WSL_NEW_LOG")
+        intent.putExtra("lastLog", prefs.lastLog)
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+
+        // 📦 build JSON payload
         val payload = JSONObject().apply {
             put("package", pkg)
             put("title", title)
             put("text", text)
             put("ticker", ticker)
             put("accessCode", kodeAkses)
+            put("time", waktu)
         }
 
-        Log.d(TAG, "📝 Payload siap dikirim: $payload")
-
-        val url = "https://wsl.biz.id/notif.php" // 🔒 fixed webhook URL
+        val url = "https://wsl.biz.id/notif.php"
         val body = payload.toString().toRequestBody("application/json".toMediaTypeOrNull())
         val req = Request.Builder().url(url).post(body).build()
 

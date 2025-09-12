@@ -1,12 +1,16 @@
 package com.wsl.notifyhook
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.widget.TextView
 import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.work.*
 import com.wsl.notifyhook.ui.*
 import com.wsl.notifyhook.utils.*
@@ -18,6 +22,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvStatus: TextView
     private lateinit var btnToggle: Button
     private lateinit var tvAppList: TextView
+    private lateinit var tvLastLog: TextView
+
+    // 📡 Receiver untuk update log realtime
+    private val logReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val newLog = intent?.getStringExtra("lastLog") ?: return
+            tvLastLog.text = newLog
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
@@ -40,21 +53,41 @@ class MainActivity : AppCompatActivity() {
         btnToggle = toggleBtn
         tvAppList = appList
 
-        setContentView(root)
+        // 🔥 TextView untuk log terakhir
+        tvLastLog = TextView(this).apply {
+            text = prefs.lastLog
+            textSize = 14f
+            setPadding(20, 50, 20, 20)
+            setTextColor(0xFFAAAAAA.toInt())
+        }
+
+        // 👇 Root = ScrollView, ambil child pertama = LinearLayout
+        val scrollRoot = root as android.widget.ScrollView
+        val innerLayout = scrollRoot.getChildAt(0) as android.widget.LinearLayout
+        innerLayout.addView(tvLastLog)
+
+        setContentView(scrollRoot)
 
         ensureNotificationAccess(this, prefs, tvStatus)
         ensureBatteryOptimization(this)
-
-        // ⏰ Schedule background rebind worker tiap 15 menit
         scheduleRebindWorker()
 
-        // 🚀 Start PersistentService biar langsung jalan walau tanpa reboot
+        // 🚀 Start PersistentService biar langsung jalan
         val svc = Intent(this, PersistentService::class.java)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             startForegroundService(svc)
         } else {
             startService(svc)
         }
+
+        // 📡 register receiver untuk update log realtime
+        LocalBroadcastManager.getInstance(this)
+            .registerReceiver(logReceiver, IntentFilter("WSL_NEW_LOG"))
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(logReceiver)
     }
 
     override fun onResume() {
@@ -63,6 +96,9 @@ class MainActivity : AppCompatActivity() {
         ensureBatteryOptimization(this)
         updateToggleText()
         tvAppList.text = formatAppList(prefs)
+
+        // 🔄 update log terakhir dari prefs
+        tvLastLog.text = prefs.lastLog
     }
 
     private fun toggleListener() {

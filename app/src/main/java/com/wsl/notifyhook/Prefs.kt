@@ -5,7 +5,6 @@ import android.content.Context
 class Prefs(ctx: Context) {
     private val sp = ctx.getSharedPreferences("notifyhook_prefs", Context.MODE_PRIVATE)
 
-    // 🎯 Access code (wajib, ganti secret → accessCode)
     var accessCode: String
         get() = sp.getString("access_code", "") ?: ""
         set(v) {
@@ -13,7 +12,6 @@ class Prefs(ctx: Context) {
             println("✅ Set accessCode (len=${v.length})")
         }
 
-    // ✅ simpan pilihan package user
     var selectedPackages: Set<String>
         get() = sp.getStringSet("selected_pkgs", emptySet()) ?: emptySet()
         set(v) {
@@ -21,7 +19,6 @@ class Prefs(ctx: Context) {
             println("✅ Saved ${v.size} selected packages")
         }
 
-    // ✅ flag internal untuk toggle listener
     var listenerEnabled: Boolean
         get() = sp.getBoolean("listener_enabled", true)
         set(v) {
@@ -29,7 +26,14 @@ class Prefs(ctx: Context) {
             println("✅ Listener enabled = $v")
         }
 
-    // 🎯 Helper: true kalau pkg ada di whitelist (atau kalau kosong = semua ditolak)
+    // 📝 simpan log notifikasi terakhir (sudah dengan timestamp)
+    var lastLog: String
+        get() = sp.getString("last_log", "📭 Belum ada notifikasi") ?: "📭 Belum ada notifikasi"
+        set(v) {
+            sp.edit().putString("last_log", v).apply()
+            println("📝 LastLog updated: $v")
+        }
+
     fun isWhitelisted(pkg: String): Boolean {
         val s = selectedPackages
         if (s.isEmpty()) return false
